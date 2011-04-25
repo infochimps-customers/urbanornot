@@ -1,0 +1,389 @@
+<html> 
+  <head> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/> 
+    <title>urban or not</title> 
+    
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script src="http://maps.google.com/maps?file=api&key=ABQIAAAAChkz8FOrMzcX9xcS09YPihQ8nda2l8z-oXOZMhvo4DA8FzaARRTqMY3lI---Deg-BGysm-7bjUoMxw"
+            type="text/javascript"></script> 
+    <script type="text/javascript" src="js/jquery.json-2.2.min.js"></script>
+    <script type="text/javascript" src="js/lettering.js"></script>
+    <script type="text/javascript"> 
+    
+    
+    var apikey = "ioda006-iKJYsf_kh1QI0ZTPA6IaN-vCH69";
+                          
+    function count_and_plot(lat, lng, map) {
+      var url = "http://s7.infinitemonkeys.info/geo/location/infochimps/the_works/places.json?apikey=" + apikey + "&_from=0&_limit=100&zoom=7&lng=" + lng + "&lat=" + lat + "&callback=?";
+      
+      
+      $.getJSON(url, 
+        function(data){ 
+          // plot POIs
+          var fc = data.features;
+          var size = 0;
+          
+          for (feature in fc) {
+            if (fc.hasOwnProperty(feature)) { 
+              if (fc[feature].geometry.type != "Point") {  // we only want to deal with them if they are points
+                // delete fc[feature];
+              } else {
+                map.addOverlay(new GMarker(new GLatLng(fc[feature].geometry.coordinates[1], fc[feature].geometry.coordinates[0]), {title: fc[feature].properties.asciiname}));
+                
+                size++; 
+              }
+            }
+          }
+          
+          //
+          
+          
+          // calculate urbanness
+          var urbanness = "";
+          var css_id = "";
+          
+          if (size > 100) {
+            urbanness = "Freakin dense"; // some areas of NYC and DC
+            css_id = "red";
+          } else if (size > 50) {
+            urbanness = "Very urban"; // most downtown areas of large cities
+            css_id = "orange";
+          } else if (size > 10) {
+            urbanness = "Pretty urban";
+            css_id = "yellow";
+          } else if (size < 1) {
+            urbanness = "A barren wasteland";
+            css_id = "gray";
+          } else if (size == 1) {
+            urbanness = "Mildly desolate";
+            css_id = "indigo";
+          }  else if (size < 6) {
+            urbanness = "Probably small town suburban or rural";
+            css_id = "blue";
+          } else if (size <= 10) {
+            urbanness = "Almost somewhat urban";
+            css_id = "green";
+          } else {
+            urbanness = "undefined";
+          }
+          
+          $("#main").append('<div class="urbanness to-lettering" id="' + css_id + '">' + urbanness + '</div><br />');
+          $("#main").append('<div class="poi">We found <b>' + size + '</b> points of interest in the area you clicked on.</div>');
+          $("#main").append('<h3>source: <a href="' + url + '">' + url + '</a></h3>');
+          $(".to-lettering").lettering('words').children('span').lettering();
+        });
+      
+    }
+      
+ 
+		
+    function initialize() {
+      if (GBrowserIsCompatible()) {
+        var map = new GMap2(document.getElementById("map_canvas"));
+        map.setCenter(new GLatLng(30.267153, -97.743061), 13);
+        
+ 
+        GEvent.addListener(map, "click", function(overlay,latlng) {
+          if (latlng) {
+            // name these so we don't forget which is which
+            var lng = latlng.x;
+            var lat = latlng.y;
+            
+            $("#main").empty(); // clear all the table rows
+            map.clearOverlays(); // clear all map markers
+            
+            count_and_plot(lat, lng, map);
+          }
+        });
+        // add google map controls
+        map.addControl(new GSmallMapControl());
+        map.addControl(new GMapTypeControl());
+        map.enableScrollWheelZoom();
+      }
+    }
+    
+    $(document).ready(function() {
+			$(".to-lettering, #instructions").lettering('words');
+      $("#red").lettering('words').children('span').lettering();
+		});
+    </script> 
+    
+  <link rel="stylesheet" href="css/screen.css" type="text/css" media="screen" charset="utf-8">
+  <link rel="stylesheet" href="css/print.css" type="text/css" media="print" charset="utf-8">
+  <!--[if lte IE 6]><link rel="stylesheet" href="css/lib/ie.css" type="text/css" media="screen" charset="utf-8"><![endif]-->
+  
+  <style type="text/css">
+  body, h1, h2, h3, h4, h5, h6, p, ul, ol, dl, input, textarea {
+    font-family: Georgia, Times New Roman, serif;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    color: #ccc;
+  }
+  
+  a {
+    color: #7b7bff;
+  }
+  
+  tr:nth-child(odd)		{ background-color:#eee; }
+  tr:nth-child(even)		{ background-color:#fff; }
+  tr th { 
+    background: #333c44; 
+    color: white;
+    padding: 4px 9px 4px 1px;
+  }
+  
+  h2 {
+    color: #4a674b;
+    margin-bottom: 2px;
+  }
+  
+  h3, h3 a {
+    color: gray;
+    font-size: 1em;
+    font-weight: normal;
+  }
+
+  
+  #map_canvas {
+    height: 350px;
+    width: 100%;
+    background-color: green;
+  }
+
+  #right_panel {
+
+    width: 100%;
+  }
+  
+  #info {
+    margin: 50px 0 0 0;
+    
+  }
+  
+  .container {
+    margin: 0 10px;
+  }
+  
+  .urbanness {
+    text-transform: uppercase;
+  }
+  
+  #main {
+    text-align: center;
+  }
+  
+  
+  /* .to-lettering span {
+    display: block;
+    float: left;
+  } */
+  
+  .poi {
+    margin-top: 10px;
+  }
+    
+  
+  .urbanness {
+    line-height: auto;
+    width: 400px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .word1, .word2, .word3, .word4, .word5, .word6, .word7 {
+     /*border: 1px solid red;*/ 
+  }
+  
+  /* ok, so this is probably a shining example of when you should use images instead of CSS, BUT i wanted to see what i could do */
+  
+  
+  #blue {
+  }
+  
+    #blue .word1 {
+      font-size: 18px;
+    }
+    
+    #blue .word2 {
+      font-size: 40px;
+      clear: right;
+      color: #0151a3;
+    }
+    
+    #blue .word3 {
+      font-size: 78px;
+      line-height: 40px;
+      color: #0151a3;
+    }
+    
+    #blue .word4 {
+      font-size: 72px;
+      line-height: 78px;
+      color: #4e4ebd;
+    }
+    
+    #blue .word5 {
+      font-size: 18px;
+      vertical-align: top;
+      line-height: 14px;
+    }
+    
+    #blue .word6 {
+      font-size: 90px;
+      vertical-align: top;
+      line-height: 56px;
+      color: #2c2c8a;
+    }
+    
+  #yellow {}
+  
+    #yellow .word1 {
+      font-size: 78px;
+      color: #b4c124;
+    }
+    
+    #yellow .word2 {
+      font-size: 96px;
+      color: #8a6708;
+      line-height: 20px;
+    }
+    
+  #orange {}
+  
+    #orange .word1 { /* very */
+      font-size: 72px;
+      color: #dd5316;
+    }
+    
+    #orange .word1 span {
+      margin: 0 20px 0 0;
+    }
+    
+    #orange .word2 { /* urban */
+      font-size: 26px;
+      color: #d13100;
+      margin: -24px;
+    }
+    
+  #red {}
+    
+    #red .word1 span, #red .word2 span {
+      display: block;
+    }
+  
+    #red .word1 {
+      font-size: 48px;
+      color: #ff0c00;
+      display: block;
+      float: left;
+      width: 72px;
+      line-height: 38px;
+      margin-left: 150px;
+    }
+    
+    #red .word2 {
+      font-size: 60px;
+      color: #9c0404;
+      display: block;
+      float: left;
+      width: 48px;
+      line-height: 40px;
+      margin-left: -26px;
+      margin-top: 62px;
+    }
+    
+    #gray {
+      text-align: right;
+    }
+    
+      #gray .word1 { /* a */
+        font-size: 18px;
+        color: #505050;
+        letter-spacing: 10px;
+      }
+      
+      #gray .word2 { /* barren */
+        font-size: 48px;
+        color: #e1e1e1;
+        letter-spacing: 10px;
+      }
+      
+      #gray .word3 { /* wasteland */
+        font-size: 48px;
+        color: #97a088;
+        letter-spacing: 20px;
+        line-height: 20px;
+      }
+      
+    #green {
+    }
+      
+      #green .word1 { /* almost */
+        font-size: 72px;
+        color: #2bcc11;
+      }
+      
+      #green .word2 { /* somewhat */
+        font-size: 30px;
+        color: #68b841;
+        font-style: italic;
+        line-height: 0px;
+      }
+      
+      #green .word3 { /* urban */
+        font-size: 30px;
+        color: #308805;
+        
+        line-height: 0px;
+      }
+        
+    #indigo {
+      text-align: left;
+    }
+      
+      #indigo .word1 { /* mildly */
+        font-size: 24px;
+        color: #bbd6d5;
+        font-style: italic;
+        clear: both;
+      }
+      
+      #indigo .word2 { /* desolate */
+        font-size: 48px;
+        color: #538a87;
+        letter-spacing: 10px;
+        margin-left: 25px;
+        line-height: 20px;
+      }
+  </style>
+  </head> 
+  <body onload="initialize()" onunload="GUnload()"> 
+
+    <div id="map_canvas"></div> 
+    <!-- <a href="#" onclick='$("#map_canvas").css("height","600px");'>taller map</a> -->
+    
+    <div id="right_panel">
+      <div class="container">
+        <div id="main"></div>
+        
+        
+
+
+
+        
+
+        <br style="clear: both;"/>
+        
+        
+        <div id="info">
+         
+          <p>This app was built using the <a href="http://infochimps.com/">Infochimps API</a>.  It uses <a href="http://www.geonames.org/">GeoNames</a> data served up through the  <a href="#">GeoNames API call</a>.</p>
+        </div>
+      </div>
+    </div>  
+  </body> 
+</html> 

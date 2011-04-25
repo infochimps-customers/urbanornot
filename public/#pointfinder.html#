@@ -1,0 +1,241 @@
+<html>
+  <head> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/> 
+    <title>geonames</title> 
+    
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script src="http://maps.google.com/maps/api/js?sensor=false&key=ABQIAAAAChkz8FOrMzcX9xcS09YPihR6mKVFj_JSiDtjb6iXE-zX8sZaEBRpamkadXZGKo6lgKoy0ZNHY4uB0A"
+            type="text/javascript"></script> 
+    <script type="text/javascript" src="js/jquery.json-2.2.min.js"></script>
+    <script type="text/javascript" src="js/GeoJSON.js"></script>
+    <script type="text/javascript"> 
+    
+    // http://www.movable-type.co.uk/scripts/latlong.html
+    /** Converts numeric degrees to radians */
+    if (typeof(Number.prototype.toRad) === "undefined") {
+      Number.prototype.toRad = function() {
+        return this * Math.PI / 180;
+      }
+    }
+    
+    // http://www.movable-type.co.uk/scripts/latlong.html
+    function distance_to(lat, lng, lat2, lng2) {
+      var R = 6371; // km
+      var dLat = (lat2-lat).toRad();
+      var dLon = (lng2-lng).toRad(); 
+      var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat.toRad()) * Math.cos(lat2.toRad()) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2); 
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+      var d = R * c;
+      return d.toPrecision(3);
+    }
+
+                  
+    function build_table(category, short_cat, lat, lng, map) {
+      var url = "http://s7.infinitemonkeys.info/geo/location/infochimps/the_works/places.json?apikey=flip69&_from=0&_limit=100&zoom=6&category=" + short_cat + "&lng=" + lng + "&lat=" + lat + "&callback=?";
+      
+      $.getJSON(url, 
+        function(data){ 
+          $("#tables").append('<h2>' + category + '</h2>');
+          $("#tables").append('<h3>source: <a href="' + url + '">' + url + '</a></h3>');
+          $("#tables").append('<table class="category-table" id="table_' + short_cat + '"><tr class="table-header"><th>Place name</th><th>Lat/Long</th><th>Feature code</th><th>Geoname ID</th><th>Admin Code</th><th>Country Code</th><th>Distance (km)</th></tr></table>');
+          
+          var fc = data.features;
+          
+          // iterate through the featurescollection
+          for (feature in fc) {
+            
+            
+            
+            // write to table
+            
+            if (fc.hasOwnProperty(feature)) { // http://stackoverflow.com/questions/684672/loop-through-json-object
+              if (fc[feature].geometry.type == "Point") {  // we only want to deal with them if they are points
+                
+                var lat2 = fc[feature].geometry.coordinates[1];
+                var lng2 = fc[feature].geometry.coordinates[0];
+                
+                // calculate distance
+                var d = distance_to(lat, lng, lat2, lng2);
+            
+            
+                $("#table_" + short_cat + " .table-header").after("<tr><td>" + fc[feature].properties.asciiname + "</td>" +
+                  "<td>" + fc[feature].geometry.coordinates.reverse() + "</td>" +
+                  "<td>" + fc[feature].properties.feature_code + "</td>" +
+                  "<td>" + fc[feature].properties.geonameid + "</td>" +
+                  "<td>" + fc[feature].properties.admin1_code + "</td>" +
+                  "<td>" + fc[feature].properties.country_code   + "</td>" +
+                  "<td>" + d   + "</td>" +
+                  "</tr>");
+                
+                map.addOverlay(new GMarker(new GLatLng(fc[feature].geometry.coordinates[0], fc[feature].geometry.coordinates[1]), {title: fc[feature].properties.asciiname}));
+              } else if (fc[feature].geometry.type == "Polygon") {
+                var polyline = new GPolyline([
+                  new GLatLng(37.4419, -122.1419),
+                  new GLatLng(37.4519, -122.1519)
+                ], "#ff0000", 10);
+                map.addOverlay(polyline);
+                
+                var geojson = fc[feature].geometry;
+                
+                var googleOptions = {
+                  strokeColor: "#FFFF00",
+                  strokeWeight: 7,
+                  strokeOpacity: 0.75
+                };
+                
+                googleVector = new GeoJSON(geojson, googleOptions);
+                
+                map.addOverlay(googleVector);
+              } else {
+              }
+            }
+            
+          }
+        });
+    }
+              
+    
+ 
+ 
+		
+    function initialize() {
+      var latlng = new google.maps.LatLng(37.4419, -122.1419);
+      
+      var myOptions = {
+        zoom: 13,
+        center: latlng,
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      };
+      var map = new google.maps.Map(document.getElementById("map_canvas"),
+        myOptions);
+    
+        
+ 
+        google.maps.event.addListener(map, "click", function(overlay,latlng) {
+            
+            
+            
+          if (latlng) {
+            var myHtml = "Lat/Long: " + latlng;
+            map.openInfoWindow(latlng, myHtml);
+            
+            
+            // set the lat long
+            lng = latlng.x;
+            lat = latlng.y;
+            
+            // var categories = [ 
+            // "food", "bed", "shop", "pow", "medical", "airport", "gov", "school", "military", "tourist", "tele", "park", "lake", "stream", "mountain", "coast", "water ", "land"]
+            
+            var categories = ["continent", "country", "state", "county", "political", "city", "area_code", "zip_code", "hood", "overlap", "demog", "struct", "food", "bed", "shop", "business", "fun", "sport", "pow", "medical", "station", "death", "police", "fire", "airport", "gov", "school", "military", "tourist", "parking", "tele", "Parks", "Lakes", "stream", "mountain", "coast", "sea", "water", "land"]
+            
+
+            $("#tables").empty(); // clear all the table rows
+            map.clearOverlays(); // clear all map markers
+            
+            
+            for (category in categories){
+              build_table(categories[category], categories[category], lat, lng, map);
+            }
+            
+           
+
+
+                
+          }
+        });
+      
+    }
+    
+    
+    
+    
+    $(document).ready(function() {
+
+          
+    });
+    
+    
+    </script> 
+    
+  <link rel="stylesheet" href="css/screen.css" type="text/css" media="screen" charset="utf-8">
+  <link rel="stylesheet" href="css/print.css" type="text/css" media="print" charset="utf-8">
+  <!--[if lte IE 6]><link rel="stylesheet" href="css/lib/ie.css" type="text/css" media="screen" charset="utf-8"><![endif]-->
+  
+  <style type="text/css">
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  tr:nth-child(odd)		{ background-color:#eee; }
+  tr:nth-child(even)		{ background-color:#fff; }
+  tr th { 
+    background: #333c44; 
+    color: white;
+    padding: 4px 9px 4px 1px;
+  }
+  
+  h2 {
+    color: #4a674b;
+    margin-bottom: 2px;
+  }
+  
+  h3, h3 a {
+    color: gray;
+    font-size: 1em;
+    font-weight: normal;
+  }
+
+  
+  #map_canvas {
+    
+    display: block;
+    position:absolute;
+    height:auto;
+    bottom:0;
+    top:0;
+    left:0;
+    width: 50%;
+    background-color: green;
+  }
+
+  #right_panel {
+    
+    display: block;
+    position:absolute;
+    height:auto;
+    bottom:0;
+    top:0;
+    right:0;
+    width: 50%;
+    overflow: scroll;
+  }
+  
+  .container {
+    margin: 0 10px;
+  }
+ 
+    
+  </style>
+  </head> 
+  <body onload="initialize()"> 
+
+    <div id="map_canvas"></div> 
+    
+    <div id="right_panel">
+      <div class="container">
+        <div id="tables"></div>
+        
+        <div id="info">
+          <p>Click anywhere on the map to retrieve a list of all the places this API knows about in a 9.7 kilometer map tile.</p>
+          
+          <p>This app was built using the <a href="http://infochimps.com/">Infochimps API</a>.  It uses <a href="http://www.geonames.org/">GeoNames</a> data served up through the  <a href="#">GeoNames API call</a>.  Distance calculation made using <a href="http://www.movable-type.co.uk/scripts/latlong.html">movable-type.co.uk</a></p>
+        </div>
+      </div>
+    
+    </div>  
+  </body> 
+</html> 
